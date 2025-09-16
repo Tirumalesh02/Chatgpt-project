@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 // Single shared axios instance (prevents effect dependency changes each render)
 const api = axios.create({
-  baseURL: 'https://chatgpt-project-tr9r.onrender.com/api',
+  baseURL: 'https://chatgpt-project-0vpi.onrender.com',
   withCredentials: true
 });
 
