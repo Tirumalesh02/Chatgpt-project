@@ -4,9 +4,8 @@ import axios from 'axios';
 const AuthContext = createContext(null);
 
 // Single shared axios instance (prevents effect dependency changes each render)
-const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
 const api = axios.create({
-  baseURL: `${API_BASE}/api`,
+  baseURL: 'https://chatgpt-project-tr9r.onrender.com/api',
   withCredentials: true
 });
 

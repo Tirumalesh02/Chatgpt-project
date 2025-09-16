@@ -32,7 +32,7 @@ const Home = () => {
     if (title) title = title.trim();
     if (!title) return
 
-  const response = await axios.post(`${import.meta.env.VITE_API_BASE || ''}/api/chat`, { title }, { withCredentials: true });
+    const response = await axios.post("https://chatgpt-project-tr9r.onrender.com/api/chat", { title }, { withCredentials: true });
     // Insert chat first so container exists before messages
     dispatch(startNewChat(response.data.chat));
     await getMessages(response.data.chat._id);
@@ -41,7 +41,7 @@ const Home = () => {
 
   // Ensure at least one chat exists initially
   useEffect(() => {
-  axios.get(`${import.meta.env.VITE_API_BASE || ''}/api/chat`, { withCredentials: true })
+    axios.get("https://chatgpt-project-tr9r.onrender.com/api/chat", { withCredentials: true })
       .then(async (response) => {
         const list = response.data.chats || [];
         dispatch(setChats(list));
@@ -55,8 +55,7 @@ const Home = () => {
         console.warn("Failed to load chats", err?.response?.status, err?.response?.data);
       });
 
-    const socketBase = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
-    const tempSocket = io(socketBase || undefined, {
+    const tempSocket = io("https://chatgpt-project-tr9r.onrender.com/", {
       withCredentials: true,
     })
 
@@ -90,7 +89,7 @@ const Home = () => {
 
   const getMessages = async (chatId) => {
     try {
-  const response = await axios.get(`${import.meta.env.VITE_API_BASE || ''}/api/chat/${chatId}`, { withCredentials: true });
+      const response = await axios.get(`https://chatgpt-project-tr9r.onrender.com/api/chat/${chatId}`, { withCredentials: true });
       // backend getMessages returns { message, messages }
       const mapped = (response.data.messages || []).map(m => ({ type: m.role === 'user' ? 'user' : 'ai', content: m.content }));
       dispatch(setMessagesForChat({ chatId, messages: mapped }));
