@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
       if(lt){
         api.defaults.headers.common['Authorization'] = `Bearer ${lt}`;
       }
-      const res = await api.get('/auth/status');
+  const res = await api.get('/api/auth/status');
       if(res.data && res.data.authenticated){
         setUser(res.data.user);
       } else {
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
   }, [refreshStatus]);
 
   const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  const res = await api.post('/api/auth/login', { email, password });
     setUser(res.data.user);
     if(res.data?.token){
       localStorage.setItem('auth.token', res.data.token);
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (email, firstname, lastname, password) => {
-    const res = await api.post('/auth/register', { email, fullName: { firstName: firstname, lastName: lastname }, password });
+  const res = await api.post('/api/auth/register', { email, fullName: { firstName: firstname, lastName: lastname }, password });
     setUser(res.data.user);
     if(res.data?.token){
       localStorage.setItem('auth.token', res.data.token);
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    try { await api.post('/auth/logout'); } catch(_) {}
+  try { await api.post('/api/auth/logout'); } catch(_) {}
     setUser(null);
     localStorage.removeItem('auth.token');
     delete api.defaults.headers.common['Authorization'];
