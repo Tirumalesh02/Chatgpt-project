@@ -10,6 +10,7 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
 ];
+
 app.use(cors({
   origin: (origin, callback) => {
     if(!origin) return callback(null, true); // same-origin or curl
@@ -18,16 +19,18 @@ app.use(cors({
   },
   credentials: true
 }));
+
 const cookieParser = require("cookie-parser");
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '../public')));
+app.use(cookieParser());
 
 
 const authRoutes = require("./routes/auth.routes");
 const chatRoutes = require("./routes/chat.routes");
 
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 
 // THIS IS ROUTES - register API endpoints before serving static assets
 app.use("/api/auth", authRoutes);
