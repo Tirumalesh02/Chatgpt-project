@@ -34,13 +34,10 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve static frontend build
-app.use(express.static(path.join(__dirname, '../public')));
+app.get("*name", (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
-// Catch-all for client-side routing (only for GET requests)
-app.get("*", (req, res)=> {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-})
 
 
 module.exports = app;
