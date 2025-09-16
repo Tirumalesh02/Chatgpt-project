@@ -34,14 +34,10 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve static frontend build
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Catch-all for client-side routing (Express 5 / path-to-regexp v6 compatible)
-// Using '/*' instead of '*' to avoid path-to-regexp Missing parameter name error on Express 5
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+app.get("*name", (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
 
 
 module.exports = app;
