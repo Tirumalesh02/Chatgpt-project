@@ -16,9 +16,9 @@ function initSocketServer(httpServer){
         const preview = trimmed.length > 220 ? `${trimmed.slice(0, 220)}...` : trimmed;
 
         return [
-            "I am in continuity mode because the AI provider is temporarily limiting requests.",
-            preview ? `You said: \"${preview}\"` : "I received your message.",
-            "Suggested next step: ask a shorter, more specific prompt and retry in about a minute."
+            "I could not reach the AI provider right now, so here is a quick fallback response.",
+            preview ? `Your message was: \"${preview}\".` : "I received your message.",
+            "Please try again in about a minute for a full AI-generated answer."
         ].join(' ');
     }
 
