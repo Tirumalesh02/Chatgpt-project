@@ -11,7 +11,7 @@ if (!geminiApiKey) {
 }
 
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-const GEMINI_MODELS = (process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || 'gemini-2.0-flash,gemini-1.5-flash')
+const GEMINI_MODELS = (process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || 'gemini-2.5-flash,gemini-2.0-flash,gemini-pro-latest')
   .split(',')
   .map((item) => item.trim())
   .filter(Boolean);
@@ -57,9 +57,14 @@ async function generateResponse(content) {
   let lastError = null;
 
   for (const model of GEMINI_MODELS) {
+    const modelCandidates = model.startsWith('models/')
+      ? [model]
+      : [model, `models/${model}`];
+
+    for (const modelName of modelCandidates) {
     try {
       const response = await ai.models.generateContent({
-        model,
+        model: modelName,
         contents: content,
       });
 
@@ -76,7 +81,7 @@ async function generateResponse(content) {
         await sleep(wrappedError.retryAfterSeconds * 1000);
         try {
           const retryResponse = await ai.models.generateContent({
-            model,
+            model: modelName,
             contents: content,
           });
 
@@ -96,6 +101,7 @@ async function generateResponse(content) {
       if (!isModelFallbackCandidate(wrappedError)) {
         throw wrappedError;
       }
+    }
     }
   }
 

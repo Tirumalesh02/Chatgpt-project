@@ -11,6 +11,17 @@ const ENABLE_VECTOR_MEMORY = process.env.ENABLE_VECTOR_MEMORY === 'true';
 function initSocketServer(httpServer){
     let vectorBackoffUntil = 0;
 
+    function buildContinuityReply(userText) {
+        const trimmed = String(userText || '').trim();
+        const preview = trimmed.length > 220 ? `${trimmed.slice(0, 220)}...` : trimmed;
+
+        return [
+            "I am in continuity mode because the AI provider is temporarily limiting requests.",
+            preview ? `You said: \"${preview}\"` : "I received your message.",
+            "Suggested next step: ask a shorter, more specific prompt and retry in about a minute."
+        ].join(' ');
+    }
+
     const io = new Server(httpServer, {
         cors: {
             origin: "http://localhost:5173",
@@ -156,22 +167,27 @@ function initSocketServer(httpServer){
                     message: error?.message
                 });
 
-                const retryText = error?.retryAfterSeconds
-                    ? `Please try again in about ${error.retryAfterSeconds}s.`
-                    : 'Please try again after a short wait.';
-
-                const fallbackMessage = error?.isQuotaError
-                    ? `Gemini API quota exceeded. ${retryText}`
-                    : 'AI service is temporarily unavailable. Please try again.';
+                const fallbackMessage = buildContinuityReply(messagePayload?.content);
 
                 socket.emit('ai-response', {
                     content: fallbackMessage,
                     chat: messagePayload?.chat
                 });
 
+                try {
+                    await messageModel.create({
+                        chat: messagePayload.chat,
+                        user: socket.user._id,
+                        content: fallbackMessage,
+                        role: 'model'
+                    });
+                } catch (persistError) {
+                    console.warn('Failed to persist continuity fallback response:', persistError?.message);
+                }
+
                 socket.emit('ai-error', {
                     status: error?.status || 500,
-                    message: fallbackMessage,
+                    message: error?.message || 'AI provider request failed',
                     retryAfterSeconds: error?.retryAfterSeconds || null,
                     chat: messagePayload?.chat
                 });
