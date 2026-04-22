@@ -131,9 +131,9 @@ return (
       )}
       {messages.length === 0 && (
         <div className="chat-welcome" aria-hidden="true">
-          <div className="chip">Early Preview</div>
+          <div className="chip">Demo Ready</div>
           <h1>MEM GPT</h1>
-          <p>Ask anything. Paste text, brainstorm ideas, or get quick explanations. Your chats stay in the sidebar so you can pick up where you left off.</p>
+          <p>Start a chat, paste notes, or ask for quick help. Conversations stay in the sidebar so you can return to them anytime.</p>
         </div>
       )}
       <ChatMessages messages={messages} isSending={isSending} />
