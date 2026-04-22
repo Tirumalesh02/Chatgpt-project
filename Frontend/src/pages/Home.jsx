@@ -17,7 +17,6 @@ const Home = () => {
   const isSending = useSelector(state => state.chat.isSending);
   const [ sidebarOpen, setSidebarOpen ] = React.useState(false);
   const [ socket, setSocket ] = useState(null);
-  const [ statusMessage, setStatusMessage ] = useState('');
 
   const activeChat = chats.find(c => c._id === activeChatId) || null;
   const messages = activeChat?.messages || [];
@@ -70,7 +69,6 @@ const Home = () => {
     })
 
     tempSocket.on("ai-response", (messagePayload) => {
-      setStatusMessage('');
       const targetChatId = messagePayload.chat || activeChatIdRef.current;
       if(!targetChatId) return;
       const currentChats = chatsRef.current || [];
@@ -78,14 +76,6 @@ const Home = () => {
       const currentMsgs = target?.messages || [];
       const updated = [ ...currentMsgs, { type: 'ai', content: messagePayload.content } ];
       dispatch(setMessagesForChat({ chatId: targetChatId, messages: updated }));
-      dispatch(sendingFinished());
-    });
-
-    tempSocket.on("ai-error", (errorPayload) => {
-      const retryText = errorPayload?.retryAfterSeconds
-        ? `Please try again in about ${errorPayload.retryAfterSeconds}s.`
-        : 'Please try again in a moment.';
-      setStatusMessage(errorPayload?.message || `I could not reach the AI provider right now. ${retryText}`);
       dispatch(sendingFinished());
     });
 
@@ -124,11 +114,6 @@ return (
       open={sidebarOpen}
     />
     <main className="chat-main" role="main">
-      {statusMessage && (
-        <div className="chat-status" role="status" aria-live="polite">
-          {statusMessage}
-        </div>
-      )}
       {messages.length === 0 && (
         <div className="chat-welcome" aria-hidden="true">
           <div className="chip">Demo Ready</div>

@@ -11,14 +11,28 @@ const ENABLE_VECTOR_MEMORY = process.env.ENABLE_VECTOR_MEMORY === 'true';
 function initSocketServer(httpServer){
     let vectorBackoffUntil = 0;
 
-    function buildContinuityReply(userText) {
+    function buildLocalReply(userText) {
         const trimmed = String(userText || '').trim();
-        const preview = trimmed.length > 220 ? `${trimmed.slice(0, 220)}...` : trimmed;
+        const normalized = trimmed.toLowerCase();
+
+        if (!trimmed) {
+            return 'I am ready. Send me a question and I will help you with a useful response.';
+        }
+
+        if (/^(hi|hello|hey|hii|yo)\b/.test(normalized)) {
+            return 'Hello. I am ready to help you with your project review or any question you have.';
+        }
+
+        if (/(quota|error|issue|problem|bug|not working|failed)/.test(normalized)) {
+            return 'If the AI provider is limited, the app can still keep working with a local fallback reply while the backend recovers.';
+        }
+
+        const preview = trimmed.length > 180 ? `${trimmed.slice(0, 180)}...` : trimmed;
 
         return [
-            "I could not reach the AI provider right now, so here is a quick fallback response.",
-            preview ? `Your message was: \"${preview}\".` : "I received your message.",
-            "Please try again in about a minute for a full AI-generated answer."
+            'I could not reach the AI provider right now, but I can still keep the conversation going.',
+            preview ? `You said: "${preview}".` : 'I received your message.',
+            'Try sending a more specific question and I will give you a concise, useful response.'
         ].join(' ');
     }
 
@@ -167,7 +181,7 @@ function initSocketServer(httpServer){
                     message: error?.message
                 });
 
-                const fallbackMessage = buildContinuityReply(messagePayload?.content);
+                const fallbackMessage = buildLocalReply(messagePayload?.content);
 
                 socket.emit('ai-response', {
                     content: fallbackMessage,
@@ -184,13 +198,6 @@ function initSocketServer(httpServer){
                 } catch (persistError) {
                     console.warn('Failed to persist continuity fallback response:', persistError?.message);
                 }
-
-                socket.emit('ai-error', {
-                    status: error?.status || 500,
-                    message: error?.message || 'AI provider request failed',
-                    retryAfterSeconds: error?.retryAfterSeconds || null,
-                    chat: messagePayload?.chat
-                });
             }
         })
     })
