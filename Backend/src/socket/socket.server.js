@@ -6,7 +6,11 @@ const aiService = require("../services/ai.service");
 const messageModel = require('../models/message.model');
 const {createMemory, queryMemory} = require('../services/vector.service')
 
+const ENABLE_VECTOR_MEMORY = process.env.ENABLE_VECTOR_MEMORY === 'true';
+
 function initSocketServer(httpServer){
+    let vectorBackoffUntil = 0;
+
     const io = new Server(httpServer, {
         cors: {
             origin: "http://localhost:5173",
@@ -36,6 +40,14 @@ function initSocketServer(httpServer){
         // console.log('User info:', socket.user);
 
         async function safeGenerateVector(text) {
+            if (!ENABLE_VECTOR_MEMORY) {
+                return null;
+            }
+
+            if (Date.now() < vectorBackoffUntil) {
+                return null;
+            }
+
             try {
                 return await aiService.generateVector(text);
             } catch (error) {
@@ -43,6 +55,12 @@ function initSocketServer(httpServer){
                     status: error?.status,
                     message: error?.message
                 });
+
+                if (error?.isQuotaError) {
+                    const retryAfterSeconds = Number(error?.retryAfterSeconds) || 60;
+                    vectorBackoffUntil = Date.now() + retryAfterSeconds * 1000;
+                }
+
                 return null;
             }
         }
