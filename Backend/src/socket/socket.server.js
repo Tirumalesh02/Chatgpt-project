@@ -35,43 +35,55 @@ function initSocketServer(httpServer){
         // console.log('New socket connection:', socket.id);
         // console.log('User info:', socket.user);
 
+        async function safeGenerateVector(text) {
+            try {
+                return await aiService.generateVector(text);
+            } catch (error) {
+                console.warn('vector generation skipped:', {
+                    status: error?.status,
+                    message: error?.message
+                });
+                return null;
+            }
+        }
+
         socket.on('ai-message', async(messagePayload)=>{
             try {
-                const [message, vectors] = await Promise.all([
-                    messageModel.create({
-                        chat: messagePayload.chat,
-                        user: socket.user._id,
-                        content: messagePayload.content,
-                        role: 'user'
-                    }),
-                    aiService.generateVector(messagePayload.content)
+                const message = await messageModel.create({
+                    chat: messagePayload.chat,
+                    user: socket.user._id,
+                    content: messagePayload.content,
+                    role: 'user'
+                });
 
-                ]) 
+                const vectors = await safeGenerateVector(messagePayload.content);
 
-                await createMemory({
-                    vectors,
-                    messageId: message._id,
-                    metadata: {
-                        chat: messagePayload.chat,
-                        user: socket.user._id,
-                        text: messagePayload.content
-                    }
+                if (vectors) {
+                    await createMemory({
+                        vectors,
+                        messageId: message._id,
+                        metadata: {
+                            chat: messagePayload.chat,
+                            user: socket.user._id,
+                            text: messagePayload.content
+                        }
 
-                })
+                    });
+                }
 
-                const [memory, chatHistory] = await Promise.all([
+                const chatHistory = await messageModel.find({
+                    chat: messagePayload.chat
+                }).sort({ createdAt: -1 }).limit(20).lean().then(messages => messages.reverse());
 
-                    queryMemory({
+                const memory = vectors
+                    ? await queryMemory({
                         queryVector: vectors,
                         limit: 3,
                         metadata: {
                             user: socket.user._id,
                         }
-                    }),
-                    messageModel.find({
-                        chat: messagePayload.chat
-                    }).sort({ createdAt: -1 }).limit(20).lean().then(messages => messages.reverse())
-                ])
+                    })
+                    : [];
 
                 const stm = chatHistory.map(item =>{
                     return {
@@ -100,25 +112,25 @@ function initSocketServer(httpServer){
                 });
 
 
-                const [responseMessage, responseVectors] = await Promise.all([
-                    messageModel.create({
-                        chat: messagePayload.chat,
-                        user: socket.user._id,
-                        content: response,
-                        role: 'model'
-                    }),
-                    aiService.generateVector(response)
-                ]);
+                const responseMessage = await messageModel.create({
+                    chat: messagePayload.chat,
+                    user: socket.user._id,
+                    content: response,
+                    role: 'model'
+                });
 
-                await createMemory({
-                    vectors: responseVectors,
-                    messageId: responseMessage._id,
-                    metadata: {
-                        chat: messagePayload.chat,
-                        user: socket.user._id,
-                        text: response
-                    }
-                })
+                const responseVectors = await safeGenerateVector(response);
+                if (responseVectors) {
+                    await createMemory({
+                        vectors: responseVectors,
+                        messageId: responseMessage._id,
+                        metadata: {
+                            chat: messagePayload.chat,
+                            user: socket.user._id,
+                            text: response
+                        }
+                    });
+                }
             } catch (error) {
                 console.error('ai-message failed:', {
                     status: error?.status,
