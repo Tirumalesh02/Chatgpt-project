@@ -116,9 +116,9 @@ return (
     <main className="chat-main" role="main">
       {messages.length === 0 && (
         <div className="chat-welcome" aria-hidden="true">
-          <div className="chip">Demo Ready</div>
+          <div className="chip">Project Review Mode</div>
           <h1>MEM GPT</h1>
-          <p>Start a chat, paste notes, or ask for quick help. Conversations stay in the sidebar so you can return to them anytime.</p>
+          <p>Ask a question, paste context, or request a quick explanation. Your chats are saved on the left so you can continue anytime.</p>
         </div>
       )}
       <ChatMessages messages={messages} isSending={isSending} />
