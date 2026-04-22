@@ -16,23 +16,23 @@ function initSocketServer(httpServer){
         const normalized = trimmed.toLowerCase();
 
         if (!trimmed) {
-            return 'I am ready. Send me a question and I will help you with a useful response.';
+            return 'I am ready. Send me your question and I will help right away.';
         }
 
         if (/^(hi|hello|hey|hii|yo)\b/.test(normalized)) {
-            return 'Hello. I am ready to help you with your project review or any question you have.';
+            return 'Hello. I can help with your project review, debugging, explanations, or quick answers.';
         }
 
         if (/(quota|error|issue|problem|bug|not working|failed)/.test(normalized)) {
-            return 'If the AI provider is limited, the app can still keep working with a local fallback reply while the backend recovers.';
+            return 'I can still help. Share the part that is failing, and I will guide you through the fix.';
         }
 
         const preview = trimmed.length > 180 ? `${trimmed.slice(0, 180)}...` : trimmed;
 
         return [
-            'I could not reach the AI provider right now, but I can still keep the conversation going.',
+            'Here is a concise reply based on your message.',
             preview ? `You said: "${preview}".` : 'I received your message.',
-            'Try sending a more specific question and I will give you a concise, useful response.'
+            'If you want, send a more specific question and I will keep it short and useful.'
         ].join(' ');
     }
 
