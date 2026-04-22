@@ -30,11 +30,14 @@ export function AuthProvider({ children }) {
       }
   const res = await api.get('/api/auth/status');
       if(res.data && res.data.authenticated){
+        setError(null);
         setUser(res.data.user);
       } else {
+        setError(null);
         setUser(null);
       }
-    } catch (e){
+    } catch {
+      setError('Unable to refresh auth status');
       setUser(null);
     } finally {
       setLoading(false);
@@ -46,8 +49,9 @@ export function AuthProvider({ children }) {
   }, [refreshStatus]);
 
   const login = async (email, password) => {
-  const res = await api.post('/api/auth/login', { email, password });
+    const res = await api.post('/api/auth/login', { email, password });
     setUser(res.data.user);
+    setError(null);
     if(res.data?.token){
       localStorage.setItem('auth.token', res.data.token);
       api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -56,8 +60,9 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (email, firstname, lastname, password) => {
-  const res = await api.post('/api/auth/register', { email, fullName: { firstName: firstname, lastName: lastname }, password });
+    const res = await api.post('/api/auth/register', { email, fullName: { firstName: firstname, lastName: lastname }, password });
     setUser(res.data.user);
+    setError(null);
     if(res.data?.token){
       localStorage.setItem('auth.token', res.data.token);
       api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -66,8 +71,13 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-  try { await api.post('/api/auth/logout'); } catch(_) {}
+    try {
+      await api.post('/api/auth/logout');
+    } catch (logoutError) {
+      console.warn('Logout request failed', logoutError?.message);
+    }
     setUser(null);
+    setError(null);
     localStorage.removeItem('auth.token');
     delete api.defaults.headers.common['Authorization'];
   };

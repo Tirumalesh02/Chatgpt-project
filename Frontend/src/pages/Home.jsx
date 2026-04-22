@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import '../styles/home-animations.css';
 import { io } from "socket.io-client";
 import ChatMobileBar from '../components/chat/ChatMobileBar.jsx';
 import ChatSidebar from '../components/chat/ChatSidebar.jsx';
 import ChatMessages from '../components/chat/ChatMessages.jsx';
 import ChatComposer from '../components/chat/ChatComposer.jsx';
-import { fakeAIReply } from '../components/chat/aiClient.js';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { startNewChat, selectChat, setInput, sendingStarted, sendingFinished, setChats, setMessagesForChat } from '../store/chatSlice.js';
@@ -25,6 +24,16 @@ const Home = () => {
   const chatsRef = useRef(chats);
   useEffect(()=>{ activeChatIdRef.current = activeChatId; }, [activeChatId]);
   useEffect(()=>{ chatsRef.current = chats; }, [chats]);
+
+  const getMessages = useCallback(async (chatId) => {
+    try {
+      const response = await axios.get(`https://chatgpt-project-0vpi.onrender.com/api/chat/${chatId}`, { withCredentials: true });
+      const mapped = (response.data.messages || []).map(m => ({ type: m.role === 'user' ? 'user' : 'ai', content: m.content }));
+      dispatch(setMessagesForChat({ chatId, messages: mapped }));
+    } catch (err) {
+      console.warn("Failed to load messages for chat", chatId, err?.response?.status);
+    }
+  }, [dispatch]);
 
   const handleNewChat = async () => {
     // Prompt user for title of new chat, fallback to 'New Chat'
@@ -72,7 +81,7 @@ const Home = () => {
 
     setSocket(tempSocket);
 
-  }, []);
+  }, [dispatch, getMessages]);
 
   const sendMessage = async () => {
 
@@ -86,18 +95,6 @@ const Home = () => {
     dispatch(setInput(''));
     socket.emit("ai-message", { chat: activeChatId, content: trimmed });
   };
-
-  const getMessages = async (chatId) => {
-    try {
-  const response = await axios.get(`https://chatgpt-project-0vpi.onrender.com/api/chat/${chatId}`, { withCredentials: true });
-      // backend getMessages returns { message, messages }
-      const mapped = (response.data.messages || []).map(m => ({ type: m.role === 'user' ? 'user' : 'ai', content: m.content }));
-      dispatch(setMessagesForChat({ chatId, messages: mapped }));
-    } catch (err) {
-      console.warn("Failed to load messages for chat", chatId, err?.response?.status);
-    }
-  };
-
 
 return (
   <div className="chat-layout minimal">
