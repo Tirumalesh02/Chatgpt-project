@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../AuthContext.jsx';
 import axios from 'axios';
 import { startNewChat, selectChat, setInput, sendingStarted, sendingFinished, setChats, setMessagesForChat } from '../store/chatSlice.js';
-import { getApiBaseUrl, getAuthConfig } from '../config/api.js';
+import { getApiBaseUrl, getAuthConfig, getAuthToken } from '../config/api.js';
 
 const API_BASE_URL = getApiBaseUrl();
 
