@@ -5,7 +5,9 @@ import ChatMobileBar from '../components/chat/ChatMobileBar.jsx';
 import ChatSidebar from '../components/chat/ChatSidebar.jsx';
 import ChatMessages from '../components/chat/ChatMessages.jsx';
 import ChatComposer from '../components/chat/ChatComposer.jsx';
+import ConnectionStatus from '../components/ConnectionStatus.jsx';
 import { useDispatch, useSelector } from 'react-redux';
+import { useAuth } from '../AuthContext.jsx';
 import axios from 'axios';
 import { startNewChat, selectChat, setInput, sendingStarted, sendingFinished, setChats, setMessagesForChat } from '../store/chatSlice.js';
 
@@ -29,8 +31,10 @@ const Home = () => {
   const activeChatId = useSelector(state => state.chat.activeChatId);
   const input = useSelector(state => state.chat.input);
   const isSending = useSelector(state => state.chat.isSending);
+  const { user } = useAuth();
   const [ sidebarOpen, setSidebarOpen ] = React.useState(false);
   const [ socket, setSocket ] = useState(null);
+  const [ socketConnected, setSocketConnected ] = useState(false);
 
   const activeChat = chats.find(c => c._id === activeChatId) || null;
   const messages = activeChat?.messages || [];
@@ -93,9 +97,20 @@ const Home = () => {
       auth: token ? { token: `Bearer ${token}` } : undefined,
     })
 
+    tempSocket.on('connect', () => {
+      console.log('Socket connected');
+      setSocketConnected(true);
+    });
+
+    tempSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setSocketConnected(false);
+    });
+
     tempSocket.on('connect_error', (error) => {
       console.warn('Socket connection failed', error?.message);
       dispatch(sendingFinished());
+      setSocketConnected(false);
     });
 
     tempSocket.on("ai-response", (messagePayload) => {
@@ -150,6 +165,7 @@ const Home = () => {
 
 return (
   <div className="chat-layout minimal">
+    <ConnectionStatus socketConnected={socketConnected} isAuthenticated={!!user} isSending={isSending} />
     <ChatMobileBar
       onToggleSidebar={() => setSidebarOpen(o => !o)}
       onNewChat={handleNewChat}
