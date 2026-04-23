@@ -35,8 +35,8 @@ const chatRoutes = require("./routes/chat.routes");
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Serve SPA - catch all unmatched routes and serve index.html
-app.get(/.*/, (req, res) => {
+// Serve SPA - catch all unmatched routes (except /assets/) and serve index.html
+app.get(/^(?!\/assets\/).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
