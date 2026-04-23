@@ -49,18 +49,26 @@ const Home = () => {
     }
   }, [dispatch]);
 
+  const createChatWithTitle = useCallback(async (title) => {
+    const response = await axios.post(`${API_BASE_URL}/api/chat`, { title }, authConfig());
+    const chat = response?.data?.chat;
+    if (!chat?._id) {
+      throw new Error('Chat creation failed');
+    }
+    dispatch(startNewChat(chat));
+    return chat._id;
+  }, [dispatch]);
+
   const handleNewChat = async () => {
     // Prompt user for title of new chat, fallback to 'New Chat'
     let title = window.prompt('Enter a title for the new chat:', '');
     if (title) title = title.trim();
-    if (!title) return
+    if (!title) return;
 
-  const response = await axios.post(`${API_BASE_URL}/api/chat`, { title }, authConfig());
-    // Insert chat first so container exists before messages
-    dispatch(startNewChat(response.data.chat));
-    await getMessages(response.data.chat._id);
+    const newChatId = await createChatWithTitle(title);
+    await getMessages(newChatId);
     setSidebarOpen(false);
-  }
+  };
 
   // Ensure at least one chat exists initially
   useEffect(() => {
@@ -113,17 +121,31 @@ const Home = () => {
 
     const trimmed = input.trim();
     console.log("Sending message:", trimmed);
-    if (!trimmed || !activeChatId || isSending) return;
+    if (!trimmed || isSending) return;
+
+    let targetChatId = activeChatId;
+
+    if (!targetChatId) {
+      try {
+        const autoTitle = trimmed.slice(0, 40) || 'New Chat';
+        targetChatId = await createChatWithTitle(autoTitle);
+      } catch (error) {
+        console.warn('Unable to create chat before send', error?.message);
+        alert('Unable to create chat. Please login again and retry.');
+        return;
+      }
+    }
+
     dispatch(sendingStarted());
   const base = (activeChat?.messages || []);
   const newMessages = [ ...base, { type: 'user', content: trimmed } ];
-  dispatch(setMessagesForChat({ chatId: activeChatId, messages: newMessages }));
+  dispatch(setMessagesForChat({ chatId: targetChatId, messages: newMessages }));
     dispatch(setInput(''));
     if (!socket) {
       dispatch(sendingFinished());
       return;
     }
-    socket.emit("ai-message", { chat: activeChatId, content: trimmed });
+    socket.emit("ai-message", { chat: targetChatId, content: trimmed });
   };
 
 return (
@@ -152,14 +174,12 @@ return (
         </div>
       )}
       <ChatMessages messages={messages} isSending={isSending} />
-      {
-        activeChatId &&
-        <ChatComposer
-          input={input}
-          setInput={(v) => dispatch(setInput(v))}
-          onSend={sendMessage}
-          isSending={isSending}
-        />}
+      <ChatComposer
+        input={input}
+        setInput={(v) => dispatch(setInput(v))}
+        onSend={sendMessage}
+        isSending={isSending}
+      />
     </main>
     {sidebarOpen && (
       <button
