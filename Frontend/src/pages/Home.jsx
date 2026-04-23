@@ -9,6 +9,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { startNewChat, selectChat, setInput, sendingStarted, sendingFinished, setChats, setMessagesForChat } from '../store/chatSlice.js';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://chatgpt-project-0vpi.onrender.com';
+
+function getAuthToken() {
+  return typeof window !== 'undefined' ? localStorage.getItem('auth.token') : null;
+}
+
+function authConfig() {
+  const token = getAuthToken();
+  return {
+    withCredentials: true,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  };
+}
+
 const Home = () => {
   const dispatch = useDispatch();
   const chats = useSelector(state => state.chat.chats);
@@ -27,7 +41,7 @@ const Home = () => {
 
   const getMessages = useCallback(async (chatId) => {
     try {
-      const response = await axios.get(`https://chatgpt-project-0vpi.onrender.com/api/chat/${chatId}`, { withCredentials: true });
+      const response = await axios.get(`${API_BASE_URL}/api/chat/${chatId}`, authConfig());
       const mapped = (response.data.messages || []).map(m => ({ type: m.role === 'user' ? 'user' : 'ai', content: m.content }));
       dispatch(setMessagesForChat({ chatId, messages: mapped }));
     } catch (err) {
@@ -41,7 +55,7 @@ const Home = () => {
     if (title) title = title.trim();
     if (!title) return
 
-  const response = await axios.post("https://chatgpt-project-0vpi.onrender.com/api/chat", { title }, { withCredentials: true });
+  const response = await axios.post(`${API_BASE_URL}/api/chat`, { title }, authConfig());
     // Insert chat first so container exists before messages
     dispatch(startNewChat(response.data.chat));
     await getMessages(response.data.chat._id);
@@ -50,7 +64,7 @@ const Home = () => {
 
   // Ensure at least one chat exists initially
   useEffect(() => {
-  axios.get("https://chatgpt-project-0vpi.onrender.com/api/chat", { withCredentials: true })
+  axios.get(`${API_BASE_URL}/api/chat`, authConfig())
       .then(async (response) => {
         const list = response.data.chats || [];
         dispatch(setChats(list));
@@ -64,9 +78,17 @@ const Home = () => {
         console.warn("Failed to load chats", err?.response?.status, err?.response?.data);
       });
 
-  const tempSocket = io("https://chatgpt-project-0vpi.onrender.com/", {
+    const token = getAuthToken();
+
+  const tempSocket = io(`${API_BASE_URL}/`, {
       withCredentials: true,
+      auth: token ? { token: `Bearer ${token}` } : undefined,
     })
+
+    tempSocket.on('connect_error', (error) => {
+      console.warn('Socket connection failed', error?.message);
+      dispatch(sendingFinished());
+    });
 
     tempSocket.on("ai-response", (messagePayload) => {
       const targetChatId = messagePayload.chat || activeChatIdRef.current;
@@ -81,6 +103,10 @@ const Home = () => {
 
     setSocket(tempSocket);
 
+    return () => {
+      tempSocket.disconnect();
+    };
+
   }, [dispatch, getMessages]);
 
   const sendMessage = async () => {
@@ -93,6 +119,10 @@ const Home = () => {
   const newMessages = [ ...base, { type: 'user', content: trimmed } ];
   dispatch(setMessagesForChat({ chatId: activeChatId, messages: newMessages }));
     dispatch(setInput(''));
+    if (!socket) {
+      dispatch(sendingFinished());
+      return;
+    }
     socket.emit("ai-message", { chat: activeChatId, content: trimmed });
   };
 

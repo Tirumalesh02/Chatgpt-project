@@ -8,6 +8,31 @@ const {createMemory, queryMemory} = require('../services/vector.service')
 
 const ENABLE_VECTOR_MEMORY = process.env.ENABLE_VECTOR_MEMORY === 'true';
 
+function normalizeToken(rawToken) {
+    if (!rawToken) return null;
+    if (rawToken.startsWith('Bearer ')) return rawToken.slice(7);
+    return rawToken;
+}
+
+function extractSocketToken(socket) {
+    const cookies = cookie.parse(socket.handshake.headers?.cookie || '');
+    if (cookies.token) return cookies.token;
+
+    const authToken = normalizeToken(socket.handshake.auth?.token);
+    if (authToken) return authToken;
+
+    const authHeader = normalizeToken(socket.handshake.headers?.authorization);
+    if (authHeader) return authHeader;
+
+    const xAuthToken = normalizeToken(socket.handshake.headers?.['x-auth-token']);
+    if (xAuthToken) return xAuthToken;
+
+    const legacyAuthToken = normalizeToken(socket.handshake.headers?.['auth-token']);
+    if (legacyAuthToken) return legacyAuthToken;
+
+    return null;
+}
+
 function initSocketServer(httpServer){
     let vectorBackoffUntil = 0;
 
@@ -45,13 +70,16 @@ function initSocketServer(httpServer){
     })
 
     io.use(async(socket, next) =>{
-        const cookies = cookie.parse(socket.handshake.headers?.cookie || '');
-        if(!cookies.token){
+        const token = extractSocketToken(socket);
+        if(!token){
             return next(new Error('Authentication error'));
         }
         try{
-            const decoded = jwt.verify(cookies.token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await userModel.findById(decoded.userId);
+            if (!user) {
+                return next(new Error('Authentication error'));
+            }
             socket.user = user;
             next();
 
