@@ -7,6 +7,12 @@ const messageModel = require('../models/message.model');
 const {createMemory, queryMemory} = require('../services/vector.service')
 
 const ENABLE_VECTOR_MEMORY = process.env.ENABLE_VECTOR_MEMORY === 'true';
+const SOCKET_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://chatgpt-project-0vpi.onrender.com'
+];
 
 function normalizeToken(rawToken) {
     if (!rawToken) return null;
@@ -63,7 +69,11 @@ function initSocketServer(httpServer){
 
     const io = new Server(httpServer, {
         cors: {
-            origin: "http://localhost:5173",
+            origin: (origin, callback) => {
+                if (!origin) return callback(null, true);
+                if (SOCKET_ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+                return callback(new Error(`Socket CORS not allowed: ${origin}`));
+            },
             allowedHeaders: [ "Content-Type", "Authorization" ],
             credentials: true
         }
