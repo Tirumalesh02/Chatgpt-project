@@ -10,20 +10,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../AuthContext.jsx';
 import axios from 'axios';
 import { startNewChat, selectChat, setInput, sendingStarted, sendingFinished, setChats, setMessagesForChat } from '../store/chatSlice.js';
+import { getApiBaseUrl, getAuthConfig } from '../config/api.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://chatgpt-project-0vpi.onrender.com';
-
-function getAuthToken() {
-  return typeof window !== 'undefined' ? localStorage.getItem('auth.token') : null;
-}
-
-function authConfig() {
-  const token = getAuthToken();
-  return {
-    withCredentials: true,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  };
-}
+const API_BASE_URL = getApiBaseUrl();
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -45,7 +34,7 @@ const Home = () => {
 
   const getMessages = useCallback(async (chatId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/chat/${chatId}`, authConfig());
+      const response = await axios.get(`${API_BASE_URL}/api/chat/${chatId}`, getAuthConfig());
       const mapped = (response.data.messages || []).map(m => ({ type: m.role === 'user' ? 'user' : 'ai', content: m.content }));
       dispatch(setMessagesForChat({ chatId, messages: mapped }));
     } catch (err) {
@@ -54,7 +43,7 @@ const Home = () => {
   }, [dispatch]);
 
   const createChatWithTitle = useCallback(async (title) => {
-    const response = await axios.post(`${API_BASE_URL}/api/chat`, { title }, authConfig());
+    const response = await axios.post(`${API_BASE_URL}/api/chat`, { title }, getAuthConfig());
     const chat = response?.data?.chat;
     if (!chat?._id) {
       throw new Error('Chat creation failed');
@@ -76,7 +65,7 @@ const Home = () => {
 
   // Ensure at least one chat exists initially
   useEffect(() => {
-  axios.get(`${API_BASE_URL}/api/chat`, authConfig())
+  axios.get(`${API_BASE_URL}/api/chat`, getAuthConfig())
       .then(async (response) => {
         const list = response.data.chats || [];
         dispatch(setChats(list));

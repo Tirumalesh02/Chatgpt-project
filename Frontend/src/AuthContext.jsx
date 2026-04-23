@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import { getApiBaseUrl, getAuthToken } from './config/api.js';
 
 const AuthContext = createContext(null);
 
 // Single shared axios instance (prevents effect dependency changes each render)
 const api = axios.create({
-  baseURL: 'https://chatgpt-project-0vpi.onrender.com',
+  baseURL: getApiBaseUrl(),
   withCredentials: true
 });
 
